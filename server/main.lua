@@ -348,12 +348,14 @@ QBCore.Commands.Add('911e', Lang:t('info.ems_report'), {{name = 'message', help 
 	if args[1] then message = table.concat(args, " ") else message = Lang:t('info.civ_call') end
     local ped = GetPlayerPed(src)
     local coords = GetEntityCoords(ped)
+	local Player = QBCore.Functions.GetPlayer(src)
     local players = QBCore.Functions.GetQBPlayers()
     for _, v in pairs(players) do
         if v.PlayerData.job.name == 'ambulance' and v.PlayerData.job.onduty then
             TriggerClientEvent('hospital:client:ambulanceAlert', v.PlayerData.source, coords, message)
         end
     end
+	TriggerEvent('qb-log:server:CreateLog', 'ambulance', '911e Created', 'yellow', ('**Name:** %s | **License:** ||(%s)||\n **Info:** %s '):format(GetPlayerName(src), Player.PlayerData.license, message))
 end)
 
 QBCore.Commands.Add("status", Lang:t('info.check_health'), {}, false, function(source, _)
@@ -388,15 +390,51 @@ end)
 
 QBCore.Commands.Add("revive", Lang:t('info.revive_player_a'), {{name = "id", help = Lang:t('info.player_id')}}, false, function(source, args)
 	local src = source
+	local Staff = QBCore.Functions.GetPlayer(src)
 	if args[1] then
 		local Player = QBCore.Functions.GetPlayer(tonumber(args[1]))
 		if Player then
 			TriggerClientEvent('hospital:client:Revive', Player.PlayerData.source)
+			exports['dabz-logs']:log('info', 'qb-ambulancejob', 'revive', {
+				type = 'other',
+				player = {
+					name = GetPlayerName(src),
+					cid = Staff.PlayerData.citizenid,
+					source = src,
+					character = {
+						first = Staff.PlayerData.charinfo.firstname,
+						last = Staff.PlayerData.charinfo.lastname
+					}
+				},
+				target = {
+					name = GetPlayerName(tonumber(args[1])),
+					cid = Player.PlayerData.citizenid,
+					source = tonumber(args[1]),
+					character = {
+						first = Player.PlayerData.charinfo.firstname,
+						last = Player.PlayerData.charinfo.lastname
+					}
+				}
+			})
+			TriggerEvent('qb-log:server:CreateLog', 'ambulance', 'Revive (Staff)', 'white', ('**Staff:** %s | **License:** ||(%s)||\n **Player:** %s | **License:** ||(%s)||\n **Info:** Revived a Player. '):format(GetPlayerName(src), Staff.PlayerData.license, GetPlayerName(tonumber(args[1])), Player.PlayerData.license))
 		else
 			TriggerClientEvent('QBCore:Notify', src, Lang:t('error.not_online'), "error")
 		end
 	else
 		TriggerClientEvent('hospital:client:Revive', src)
+		exports['dabz-logs']:log('info', 'qb-ambulancejob', 'revive', {
+			type = 'self',
+			player = {
+				name = GetPlayerName(src),
+				cid = Staff.PlayerData.citizenid,
+				source = src,
+				character = {
+					first = Staff.PlayerData.charinfo.firstname,
+					last = Staff.PlayerData.charinfo.lastname
+				}
+			},
+		})
+		TriggerEvent('qb-log:server:CreateLog', 'ambulance', 'Revive (Staff)', 'white', ('**Staff:** %s | **License:** ||(%s)||\n **Info:** Revived Themself. '):format(GetPlayerName(src), Staff.PlayerData.license))
 	end
 end, "admin")
 
